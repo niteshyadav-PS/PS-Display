@@ -9,7 +9,15 @@ dotenv.config({ path: path.join(__dirname, '../../.env') })
 const NODE_ENV = process.env.NODE_ENV || 'development'
 const isProd = NODE_ENV === 'production'
 
-const WEAK_SECRETS = new Set(['change-me', 'secret', 'changeme', 'dev', 'test'])
+const WEAK_SECRETS = new Set([
+  'change-me',
+  'secret',
+  'changeme',
+  'dev',
+  'test',
+  'ps-display-dev-secret-change-in-production',
+  'insecure-dev-secret-do-not-use',
+])
 
 /** Collected startup problems so we can report them all at once instead of one per restart. */
 const fatal = []
@@ -50,11 +58,17 @@ function parseOrigins() {
     .map((o) => o.trim().replace(/\/$/, ''))
 }
 
+const mongoUri = (process.env.MONGODB_URI || '').trim()
+if (isProd && !mongoUri) fatal.push('MONGODB_URI is required')
+if (isProd && /localhost|127\.0\.0\.1/.test(mongoUri)) {
+  fatal.push('MONGODB_URI must be the Atlas connection string in production')
+}
+
 const config = {
   nodeEnv: NODE_ENV,
   isProd,
   port: Number(process.env.PORT) || 5000,
-  mongoUri: process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/ps-display',
+  mongoUri: mongoUri || 'mongodb://127.0.0.1:27017/ps-display',
   jwtSecret,
   jwtExpiresIn: process.env.JWT_EXPIRES_IN || '7d',
   clientUrl: (process.env.CLIENT_URL || 'http://localhost:5173').replace(/\/$/, ''),
