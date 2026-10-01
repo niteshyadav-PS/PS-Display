@@ -1,0 +1,155 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Outfit", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Fraunces", Georgia, "Times New Roman", serif;
+  --color-brand: #8bc53f;
+  --color-brand-hover: #7ab035;
+  --color-link: #5ec4b6;
+  --color-surface: #1a1c20;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  min-height: 100dvh;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  background: #f3f4f6;
+  color: #111827;
+}
+
+::selection {
+  background: rgba(139, 197, 63, 0.35);
+}
+
+:focus-visible {
+  outline: 2px solid #8bc53f;
+  outline-offset: 2px;
+}
+
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: none;
+}
+
+/* Smooth scrolling & better tap targets on mobile */
+@media (max-width: 1023px) {
+  button,
+  a {
+    -webkit-tap-highlight-color: transparent;
+  }
+}
+
+/* Safer long text in cards */
+.line-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* Smooth page enter (forward = from right, back = from left) */
+@keyframes page-enter-forward {
+  from {
+    opacity: 0;
+    transform: translateX(18px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes page-enter-back {
+  from {
+    opacity: 0;
+    transform: translateX(-18px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.page-transition {
+  animation: page-enter-forward 0.34s cubic-bezier(0.22, 1, 0.36, 1) both;
+  will-change: opacity, transform;
+}
+
+/* Back navigation slides in from the left. The attribute is set by the shared
+   back controls just before navigating, and cleared shortly after. */
+html[data-nav-dir='back'] .page-transition,
+.page-transition--back {
+  animation-name: page-enter-back;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .page-transition,
+  .page-transition--back {
+    animation: none;
+  }
+}
+
+/* Optional View Transitions API polish when navigate(..., { viewTransition: true }) */
+@supports (view-transition-name: none) {
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation-duration: 0.32s;
+    animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  html[data-nav-dir='back']::view-transition-old(root) {
+    animation-name: page-vt-out-back;
+  }
+
+  html[data-nav-dir='back']::view-transition-new(root) {
+    animation-name: page-vt-in-back;
+  }
+
+  @keyframes page-vt-out-back {
+    to {
+      opacity: 0;
+      transform: translateX(12px);
+    }
+  }
+
+  @keyframes page-vt-in-back {
+    from {
+      opacity: 0;
+      transform: translateX(-12px);
+    }
+  }
+}
+
+/* Visual overlay particles */
+.ps-snowflake,
+.ps-confetti {
+  position: absolute;
+  top: -12px;
+  animation-name: ps-fall;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+}
+
+.ps-confetti {
+  border-radius: 2px;
+  transform: rotate(18deg);
+}
+
+@keyframes ps-fall {
+  0% {
+    transform: translateY(-10px) translateX(0) rotate(0deg);
+  }
+  100% {
+    transform: translateY(740px) translateX(40px) rotate(360deg);
+  }
+}
+

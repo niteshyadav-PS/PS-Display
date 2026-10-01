@@ -1,0 +1,18 @@
+{
+  "name": "ps-display",
+  "private": true,
+  "version": "1.0.0",
+  "scripts": {
+    "dev": "concurrently -n api,admin,player -c green,cyan,magenta \"npm:dev:backend\" \"npm:dev:frontend\" \"npm:dev:display\"",
+    "dev:backend": "npm --prefix backend run dev",
+    "dev:frontend": "npm --prefix frontend run dev",
+    "dev:display": "npm --prefix display run dev",
+    "build": "npm --prefix frontend run build && npm --prefix display run build",
+    "lint": "npm --prefix backend run lint && npm --prefix frontend run lint && npm --prefix display run lint",
+    "seed": "npm --prefix backend run seed",
+    "install:all": "npm install && npm --prefix backend install && npm --prefix frontend install && npm --prefix display install"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1"
+  }
+}
