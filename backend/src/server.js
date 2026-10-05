@@ -4,6 +4,7 @@ import compression from 'compression'
 import helmet from 'helmet'
 import morgan from 'morgan'
 import mongoose from 'mongoose'
+import fs from 'fs'
 import path from 'path'
 import { fileURLToPath } from 'url'
 
@@ -123,6 +124,32 @@ app.use('/api/calendar', calendarRoutes)
 app.use('/api/weather', weatherRoutes)
 
 app.use('/api', notFound)
+
+const repoRoot = path.join(__dirname, '../..')
+const editorDist = path.join(repoRoot, 'frontend', 'dist')
+const playerDist = path.join(repoRoot, 'display', 'dist')
+const editorIndex = path.join(editorDist, 'index.html')
+const playerIndex = path.join(playerDist, 'index.html')
+
+if (fs.existsSync(playerIndex)) {
+  app.use(
+    '/player-assets',
+    express.static(path.join(playerDist, 'player-assets'), { index: false, maxAge: '7d' })
+  )
+  app.get(/^\/(?:pair|d\/[^/]+)\/?$/, (_req, res) => {
+    res.sendFile(playerIndex)
+  })
+}
+
+if (fs.existsSync(editorIndex)) {
+  app.use(express.static(editorDist, { index: false, maxAge: '7d' }))
+  app.get(/^(?!\/api(?:\/|$)|\/uploads(?:\/|$)).*/, (req, res, next) => {
+    if (req.method !== 'GET' && req.method !== 'HEAD') return next()
+    if (path.extname(req.path)) return next()
+    res.sendFile(editorIndex)
+  })
+}
+
 app.use(errorHandler)
 
 let server
