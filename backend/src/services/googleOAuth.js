@@ -4,10 +4,6 @@ export function isGoogleOAuthConfigured() {
   return Boolean(process.env.GOOGLE_OAUTH_CLIENT_ID && process.env.GOOGLE_OAUTH_CLIENT_SECRET)
 }
 
-export function isGoogleServiceAccountConfigured() {
-  return Boolean(process.env.GOOGLE_CLIENT_EMAIL && process.env.GOOGLE_PRIVATE_KEY)
-}
-
 function getRedirectUri() {
   return (
     process.env.GOOGLE_OAUTH_REDIRECT_URI ||

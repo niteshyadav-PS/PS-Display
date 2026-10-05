@@ -278,9 +278,6 @@ export const calendarApi = {
     }),
   fetchGoogle: (email, days = 1) =>
     api('/calendar/google', { method: 'POST', body: { email, days } }),
-  departments: () => api('/calendar/departments'),
-  fetchDepartment: (department, days = 1) =>
-    api('/calendar/google/department', { method: 'POST', body: { department, days } }),
 }
 
 export const weatherApi = {
