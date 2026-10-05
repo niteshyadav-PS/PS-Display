@@ -126,10 +126,29 @@ app.use('/api/weather', weatherRoutes)
 app.use('/api', notFound)
 
 const repoRoot = path.join(__dirname, '../..')
-const editorDist = path.join(repoRoot, 'frontend', 'dist')
-const playerDist = path.join(repoRoot, 'display', 'dist')
-const editorIndex = path.join(editorDist, 'index.html')
-const playerIndex = path.join(playerDist, 'index.html')
+
+function firstFile(candidates) {
+  return candidates.find((file) => fs.existsSync(file)) || ''
+}
+
+const editorIndex = firstFile([
+  path.join(__dirname, '../web/editor/index.html'),
+  path.join(repoRoot, 'frontend/dist/index.html'),
+  path.join(process.cwd(), 'frontend/dist/index.html'),
+  path.join(process.cwd(), 'backend/web/editor/index.html'),
+])
+const playerIndex = firstFile([
+  path.join(__dirname, '../web/player/index.html'),
+  path.join(repoRoot, 'display/dist/index.html'),
+  path.join(process.cwd(), 'display/dist/index.html'),
+  path.join(process.cwd(), 'backend/web/player/index.html'),
+])
+const editorDist = editorIndex ? path.dirname(editorIndex) : ''
+const playerDist = playerIndex ? path.dirname(playerIndex) : ''
+
+if (!editorIndex) {
+  console.error('Editor build not found. Hostinger must use an empty root directory and build command npm run install:all.')
+}
 
 if (fs.existsSync(playerIndex)) {
   app.use(
