@@ -11,7 +11,7 @@
     "start": "npm --prefix backend start",
     "lint": "npm --prefix backend run lint && npm --prefix frontend run lint && npm --prefix display run lint",
     "seed": "npm --prefix backend run seed",
-    "install:all": "npm install && npm --prefix backend install && npm --prefix frontend install && npm --prefix display install"
+    "install:all": "npm install && npm --prefix backend install && npm --prefix frontend install && npm --prefix display install && npm --prefix frontend run build && npm --prefix display run build"
   },
   "devDependencies": {
     "concurrently": "^9.2.1"
