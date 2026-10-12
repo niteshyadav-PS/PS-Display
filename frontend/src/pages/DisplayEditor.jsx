@@ -43,6 +43,15 @@ const CANVAS_W = 1280
 const CANVAS_H = 720
 const MIN_W = 24
 const MIN_H = 24
+const COPY_FONT_MIN = 8
+const COPY_FONT_MAX = 32
+const COPY_FONT_SIZES = [8, 10, 12, 14, 16, 18, 20, 24, 28, 32]
+
+function clampCopyFont(value, fallback) {
+  const n = Number(value)
+  const size = Number.isFinite(n) && n > 0 ? n : fallback
+  return clamp(Math.round(size), COPY_FONT_MIN, COPY_FONT_MAX)
+}
 
 function uid() {
   return Math.random().toString(36).slice(2, 10)
@@ -115,8 +124,10 @@ function copyWidgetMinSize(type) {
 /** Measure heading/text so the frame hugs the content (no empty padding box). */
 function measureCopyWidgetSize(widget) {
   if (typeof document === 'undefined' || !isCopyWidget(widget?.type)) return null
-  const fontSize =
-    Number(widget.props?.fontSize) || (widget.type === 'heading' ? 32 : 16)
+  const fontSize = clampCopyFont(
+    widget.props?.fontSize,
+    widget.type === 'heading' ? 32 : 16
+  )
   const bold =
     widget.type === 'heading' ? widget.props?.bold !== false : Boolean(widget.props?.bold)
   const raw =
@@ -216,14 +227,7 @@ function hugWidget(widget) {
 }
 
 function hugDisplay(display) {
-  if (!display?.pages) return display
-  return {
-    ...display,
-    pages: display.pages.map((page) => ({
-      ...page,
-      widgets: (page.widgets || []).map(hugWidget),
-    })),
-  }
+  return display
 }
 
 function placeHug(handle, drag, size) {
@@ -936,38 +940,39 @@ export default function DisplayEditor() {
       const handle = drag.handle
 
       if (isHugWidget(drag.type)) {
-        let trialW = drag.origW
-        let trialH = drag.origH
-        if (handle.includes('e')) trialW = drag.origW + dx
-        if (handle.includes('s')) trialH = drag.origH + dy
-        if (handle.includes('w')) trialW = drag.origW - dx
-        if (handle.includes('n')) trialH = drag.origH - dy
         const horizontal = handle.includes('e') || handle.includes('w')
         const vertical = handle.includes('n') || handle.includes('s')
-        const widthRatio = trialW / drag.origW
-        const heightRatio = trialH / drag.origH
-        let ratio = 1
-        if (horizontal && vertical) {
-          ratio = Math.abs(widthRatio - 1) >= Math.abs(heightRatio - 1) ? widthRatio : heightRatio
-        } else if (horizontal) ratio = widthRatio
-        else ratio = heightRatio
-        ratio = clamp(ratio, 0.25, 8)
-
-        const baseFont = Number(drag.props?.fontSize) || (drag.type === 'heading' ? 32 : 16)
-        const nextFont = clamp(Math.round(baseFont * ratio), 8, 220)
-        const size = measureCopyWidgetSize({
-          type: drag.type,
-          x: drag.origX,
-          y: drag.origY,
-          props: { ...drag.props, fontSize: nextFont },
-        })
-        if (size) {
-          patchWidget(drag.id, {
-            ...placeHug(handle, drag, size),
-            props: { fontSize: nextFont },
+        const corner = horizontal && vertical
+        if (corner) {
+          let trialW = drag.origW
+          let trialH = drag.origH
+          if (handle.includes('e')) trialW = drag.origW + dx
+          if (handle.includes('s')) trialH = drag.origH + dy
+          if (handle.includes('w')) trialW = drag.origW - dx
+          if (handle.includes('n')) trialH = drag.origH - dy
+          const widthRatio = trialW / drag.origW
+          const heightRatio = trialH / drag.origH
+          const ratio =
+            Math.abs(widthRatio - 1) >= Math.abs(heightRatio - 1) ? widthRatio : heightRatio
+          const baseFont = clampCopyFont(
+            drag.props?.fontSize,
+            drag.type === 'heading' ? 32 : 16
+          )
+          const nextFont = clampCopyFont(baseFont * ratio, baseFont)
+          const size = measureCopyWidgetSize({
+            type: drag.type,
+            x: drag.origX,
+            y: drag.origY,
+            props: { ...drag.props, fontSize: nextFont },
           })
+          if (size) {
+            patchWidget(drag.id, {
+              ...placeHug(handle, drag, size),
+              props: { fontSize: nextFont },
+            })
+          }
+          return
         }
-        return
       }
 
       const minW = drag.minW || MIN_W
@@ -1630,7 +1635,9 @@ export default function DisplayEditor() {
                       }}
                     >
                       <div
-                        className="pointer-events-none h-full w-full overflow-hidden"
+                        className={`pointer-events-none h-full w-full ${
+                          w.type === 'heading' || w.type === 'text' ? 'overflow-visible' : 'overflow-hidden'
+                        }`}
                         style={{
                           borderRadius: 'inherit',
                           transform: w.props?.flipH ? 'scaleX(-1)' : undefined,
@@ -2185,13 +2192,13 @@ export default function DisplayEditor() {
                     <label className="block">
                       <span className="text-xs text-gray-500">Font size</span>
                       <select
-                        value={selected.props?.fontSize || 32}
+                        value={clampCopyFont(selected.props?.fontSize, 32)}
                         onChange={(e) =>
                           patchSelectedCopyProps({ fontSize: Number(e.target.value) })
                         }
                         className="mt-1 w-full rounded-lg border border-gray-200 px-2 py-1.5"
                       >
-                        {[20, 24, 28, 32, 40, 48, 56, 64].map((size) => (
+                        {COPY_FONT_SIZES.map((size) => (
                           <option key={size} value={size}>
                             {size}px
                           </option>
@@ -2248,13 +2255,13 @@ export default function DisplayEditor() {
                     <label className="block">
                       <span className="text-xs text-gray-500">Font size</span>
                       <select
-                        value={selected.props?.fontSize || 16}
+                        value={clampCopyFont(selected.props?.fontSize, 16)}
                         onChange={(e) =>
                           patchSelectedCopyProps({ fontSize: Number(e.target.value) })
                         }
                         className="mt-1 w-full rounded-lg border border-gray-200 px-2 py-1.5"
                       >
-                        {[12, 14, 16, 18, 20, 24, 28, 32].map((size) => (
+                        {COPY_FONT_SIZES.map((size) => (
                           <option key={size} value={size}>
                             {size}px
                           </option>

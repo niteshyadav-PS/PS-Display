@@ -235,19 +235,62 @@ function WeatherWidget({ props, className }) {
 }
 
 function faceSize(inner) {
-  const style = getComputedStyle(inner)
-  const padX = (parseFloat(style.paddingLeft) || 0) + (parseFloat(style.paddingRight) || 0)
-  const padY = (parseFloat(style.paddingTop) || 0) + (parseFloat(style.paddingBottom) || 0)
-  const gap = parseFloat(style.rowGap) || parseFloat(style.gap) || 0
-  const kids = [...inner.children]
-  let contentW = 0
-  let contentH = 0
-  kids.forEach((child, index) => {
-    contentW = Math.max(contentW, child.scrollWidth)
-    contentH += child.offsetHeight
-    if (index > 0) contentH += gap
+  return {
+    w: Math.ceil(inner.scrollWidth) + 4,
+    h: Math.ceil(inner.scrollHeight) + 4,
+  }
+}
+
+function useContainScale() {
+  const outerRef = useRef(null)
+  const innerRef = useRef(null)
+  const [scale, setScale] = useState(1)
+
+  useLayoutEffect(() => {
+    const outer = outerRef.current
+    const inner = innerRef.current
+    if (!outer || !inner) return undefined
+    const fit = () => {
+      const boxW = outer.clientWidth
+      const boxH = outer.clientHeight
+      const contentW = inner.scrollWidth
+      const contentH = inner.scrollHeight
+      if (!boxW || !boxH || !contentW || !contentH) return
+      const next = Math.min(1, boxW / contentW, boxH / contentH)
+      setScale((prev) => (Math.abs(prev - next) < 0.005 ? prev : next))
+    }
+    fit()
+    const observer = new ResizeObserver(fit)
+    observer.observe(outer)
+    observer.observe(inner)
+    return () => observer.disconnect()
   })
-  return { w: Math.ceil(contentW + padX) + 4, h: Math.ceil(contentH + padY) + 2 }
+
+  return { outerRef, innerRef, scale }
+}
+
+function Contain({ children, innerClassName = '', innerStyle }) {
+  const { outerRef, innerRef, scale } = useContainScale()
+  return (
+    <div ref={outerRef} className="contain-frame">
+      <div
+        ref={innerRef}
+        className={innerClassName}
+        style={{
+          width: '100%',
+          height: 'auto',
+          minHeight: '100%',
+          overflow: 'visible',
+          boxSizing: 'border-box',
+          transform: scale < 0.999 ? `scale(${scale})` : undefined,
+          transformOrigin: 'top left',
+          ...innerStyle,
+        }}
+      >
+        {children}
+      </div>
+    </div>
+  )
 }
 
 function fitFace(outer, inner, setStretch) {
@@ -340,13 +383,17 @@ function Widget({ widget, pageBackground = '#ffffff', now }) {
   }
 
   if (type === 'weather') {
-    return <WeatherWidget props={props} className={accentClass} />
+    return (
+      <Contain>
+        <WeatherWidget props={props} className={accentClass} />
+      </Contain>
+    )
   }
 
   if (type === 'calendar') {
     const items = Array.isArray(props.items) ? props.items : []
     return (
-      <div className={`${contentClass} calendar`}>
+      <Contain innerClassName={`${contentClass} calendar`}>
         <h3>{props.title || "Today's Schedule"}</h3>
         <ul>
           {items.map((item, i) => (
@@ -356,14 +403,14 @@ function Widget({ widget, pageBackground = '#ffffff', now }) {
             </li>
           ))}
         </ul>
-      </div>
+      </Contain>
     )
   }
 
   if (type === 'dashboard') {
     const metrics = Array.isArray(props.metrics) ? props.metrics : []
     return (
-      <div className={`${accentClass} kpi`}>
+      <Contain innerClassName={`${accentClass} kpi`}>
         <strong className="kpi-title">{props.title || 'Company KPIs'}</strong>
         <div className="metrics">
           {metrics.map((m, i) => (
@@ -374,7 +421,7 @@ function Widget({ widget, pageBackground = '#ffffff', now }) {
             </div>
           ))}
         </div>
-      </div>
+      </Contain>
     )
   }
 
@@ -441,45 +488,48 @@ function Widget({ widget, pageBackground = '#ffffff', now }) {
   }
 
   if (type === 'heading') {
-    const fontSize = Number(props.fontSize) || 32
+    const fontSize = Math.min(32, Math.max(8, Number(props.fontSize) || 32))
     const bold = props.bold !== false
     const align = props.align === 'center' || props.align === 'right' ? props.align : 'left'
     return (
-      <div className={`${clearClass} heading-widget`} style={{ textAlign: align }}>
+      <Contain innerClassName={`${clearClass} heading-widget`} innerStyle={{ textAlign: align }}>
         <h2
           style={{
             fontSize,
             fontWeight: bold ? 800 : 500,
+            lineHeight: 1.15,
+            letterSpacing: '-0.025em',
             whiteSpace: 'pre-wrap',
             wordBreak: 'break-word',
           }}
         >
           {props.text || props.title || ''}
         </h2>
-      </div>
+      </Contain>
     )
   }
 
   if (type === 'text') {
     const body = props.body || props.text || ''
     const legacyTitle = !body && props.title ? props.title : ''
-    const fontSize = Number(props.fontSize) || 16
+    const fontSize = Math.min(32, Math.max(8, Number(props.fontSize) || 16))
     const bold = Boolean(props.bold)
     const align = props.align === 'center' || props.align === 'right' ? props.align : 'left'
     return (
-      <div className={`${clearClass} text-widget`} style={{ textAlign: align }}>
+      <Contain innerClassName={`${clearClass} text-widget`} innerStyle={{ textAlign: align }}>
         {legacyTitle ? <h3>{legacyTitle}</h3> : null}
         <p
           style={{
             fontSize,
             fontWeight: bold ? 700 : 400,
+            lineHeight: 1.2,
             whiteSpace: 'pre-wrap',
             wordBreak: 'break-word',
           }}
         >
           {body}
         </p>
-      </div>
+      </Contain>
     )
   }
 
@@ -490,14 +540,14 @@ function Widget({ widget, pageBackground = '#ffffff', now }) {
         ? [{ text: props.body }]
         : []
     return (
-      <div className="widget notes">
+      <Contain innerClassName="widget notes">
         <div className="notes-title">{props.title || 'Notes'}</div>
         <ul>
           {items.map((item, i) => (
             <li key={i}>{typeof item === 'string' ? item : item.text || item.label}</li>
           ))}
         </ul>
-      </div>
+      </Contain>
     )
   }
 
@@ -508,7 +558,7 @@ function Widget({ widget, pageBackground = '#ffffff', now }) {
         ? [{ headline: props.body }]
         : []
     return (
-      <div className={`${accentClass} news`}>
+      <Contain innerClassName={`${accentClass} news`}>
         <div className="news-head">
           <strong>{props.title || 'Headlines'}</strong>
           <span>NEWS</span>
@@ -521,7 +571,7 @@ function Widget({ widget, pageBackground = '#ffffff', now }) {
             </li>
           ))}
         </ul>
-      </div>
+      </Contain>
     )
   }
 
@@ -873,7 +923,7 @@ export default function Player() {
                 opacity: Number.isFinite(opacity) ? opacity : 1,
                 borderRadius: Number.isFinite(cornerRadius) ? cornerRadius : undefined,
                 boxShadow: shadowOff ? 'none' : undefined,
-                overflow: 'hidden',
+                overflow: w.type === 'heading' || w.type === 'text' ? 'visible' : 'hidden',
                 transform: w.props?.flipH ? 'scaleX(-1)' : undefined,
                 filter: w.props?.blur ? `blur(${Number(w.props.blur) || 0}px)` : undefined,
               }}

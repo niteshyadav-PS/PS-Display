@@ -160,6 +160,12 @@ body,
 }
 
 .widget.accent {
+  overflow: visible;
+}
+
+.contain-frame {
+  width: 100%;
+  height: 100%;
   overflow: hidden;
 }
 
@@ -330,6 +336,11 @@ body,
   font-variant-numeric: tabular-nums;
 }
 
+.widget.calendar li span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
 .widget.frame-shell {
   padding: 0;
   overflow: hidden;
@@ -474,6 +485,7 @@ body,
   font-weight: 600;
   letter-spacing: 0.04em;
   text-transform: uppercase;
+  overflow-wrap: anywhere;
 }
 
 .metrics b {
@@ -496,8 +508,8 @@ body,
 
 .widget.heading-widget h2 {
   margin: 0;
-  line-height: 1.35;
-  letter-spacing: -0.02em;
+  line-height: 1.15;
+  letter-spacing: -0.025em;
   white-space: pre-wrap;
   word-break: break-word;
 }
@@ -519,7 +531,7 @@ body,
 
 .widget.text-widget p {
   margin: 0;
-  line-height: 1.35;
+  line-height: 1.2;
   opacity: 0.92;
   white-space: pre-wrap;
   word-break: break-word;
@@ -560,6 +572,7 @@ body,
   padding-left: 14px;
   font-size: 14px;
   line-height: 1.4;
+  overflow-wrap: anywhere;
 }
 
 .widget.notes li::before {
@@ -622,6 +635,7 @@ body,
   font-weight: 650;
   line-height: 1.35;
   letter-spacing: -0.01em;
+  overflow-wrap: anywhere;
 }
 
 .widget.quote {

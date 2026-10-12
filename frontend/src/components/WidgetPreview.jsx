@@ -63,20 +63,63 @@ function mediaSrc(props, { preferDirect = false } = {}) {
 }
 
 function faceSize(inner) {
-  const style = getComputedStyle(inner)
-  const padX = (parseFloat(style.paddingLeft) || 0) + (parseFloat(style.paddingRight) || 0)
-  const padY = (parseFloat(style.paddingTop) || 0) + (parseFloat(style.paddingBottom) || 0)
-  const gap = parseFloat(style.rowGap) || parseFloat(style.gap) || 0
-  const kids = [...inner.children]
-  let contentW = 0
-  let contentH = 0
-  kids.forEach((child, index) => {
-    contentW = Math.max(contentW, child.scrollWidth)
-    contentH += child.offsetHeight
-    if (index > 0) contentH += gap
+  // Measure the face itself. Child offsetHeight misses letter-spacing and gets clipped.
+  return {
+    w: Math.ceil(inner.scrollWidth) + 4,
+    h: Math.ceil(inner.scrollHeight) + 4,
+  }
+}
+
+function useContainScale() {
+  const outerRef = useRef(null)
+  const innerRef = useRef(null)
+  const [scale, setScale] = useState(1)
+
+  useLayoutEffect(() => {
+    const outer = outerRef.current
+    const inner = innerRef.current
+    if (!outer || !inner) return undefined
+    const fit = () => {
+      const boxW = outer.clientWidth
+      const boxH = outer.clientHeight
+      const contentW = inner.scrollWidth
+      const contentH = inner.scrollHeight
+      if (!boxW || !boxH || !contentW || !contentH) return
+      const next = Math.min(1, boxW / contentW, boxH / contentH)
+      setScale((prev) => (Math.abs(prev - next) < 0.005 ? prev : next))
+    }
+    fit()
+    const observer = new ResizeObserver(fit)
+    observer.observe(outer)
+    observer.observe(inner)
+    return () => observer.disconnect()
   })
-  // Extra pixels so the last glyph and letter-spacing are not clipped.
-  return { w: Math.ceil(contentW + padX) + 4, h: Math.ceil(contentH + padY) + 2 }
+
+  return { outerRef, innerRef, scale }
+}
+
+function Contain({ children, innerClassName = '', innerStyle }) {
+  const { outerRef, innerRef, scale } = useContainScale()
+  return (
+    <div ref={outerRef} className="h-full w-full overflow-hidden">
+      <div
+        ref={innerRef}
+        className={innerClassName}
+        style={{
+          width: '100%',
+          height: 'auto',
+          minHeight: '100%',
+          overflow: 'visible',
+          boxSizing: 'border-box',
+          transform: scale < 0.999 ? `scale(${scale})` : undefined,
+          transformOrigin: 'top left',
+          ...innerStyle,
+        }}
+      >
+        {children}
+      </div>
+    </div>
+  )
 }
 
 function fitFace(outer, inner, setStretch) {
@@ -226,7 +269,7 @@ export default function WidgetPreview({ widget, pageBackground = '#ffffff' }) {
 
   if (type === 'weather') {
     return (
-      <div className={`flex items-center gap-3 p-4 ${accentShell}`}>
+      <Contain innerClassName={`flex items-center gap-3 p-4 ${accentShell}`}>
         <span className="text-3xl">☀️</span>
         <div>
           <div className="text-3xl font-bold">{props.temp ?? 28}°C</div>
@@ -234,13 +277,13 @@ export default function WidgetPreview({ widget, pageBackground = '#ffffff' }) {
             {props.condition || 'Partly Cloudy'}
           </div>
         </div>
-      </div>
+      </Contain>
     )
   }
 
   if (type === 'calendar') {
     return (
-      <div className={`overflow-auto p-4 ${contentShell}`}>
+      <Contain innerClassName={`p-4 ${contentShell}`}>
         <div className={`mb-2 text-[15px] font-bold tracking-wide ${pageLight ? 'text-gray-900' : 'text-white'}`}>
           {props.title || "Today's Schedule"}
         </div>
@@ -251,20 +294,20 @@ export default function WidgetPreview({ widget, pageBackground = '#ffffff' }) {
                 className="mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full"
                 style={{ background: item.color || '#7c3aed' }}
               />
-              <span className="min-w-[3.2em] font-bold tabular-nums" style={{ color: item.color || undefined }}>
+              <span className="min-w-[3.2em] shrink-0 font-bold tabular-nums" style={{ color: item.color || undefined }}>
                 {item.time}
               </span>
-              <span>{item.label}</span>
+              <span className="min-w-0 break-words">{item.label}</span>
             </li>
           ))}
         </ul>
-      </div>
+      </Contain>
     )
   }
 
   if (type === 'dashboard') {
     return (
-      <div className={`flex items-center justify-between gap-4 px-5 py-4 pl-6 ${accentShell}`}>
+      <Contain innerClassName={`flex items-center justify-between gap-4 px-5 py-4 pl-6 ${accentShell}`}>
         <div className="shrink-0 text-[15px] font-bold uppercase tracking-[0.04em] text-brand">
           {props.title || 'Company KPIs'}
         </div>
@@ -274,12 +317,12 @@ export default function WidgetPreview({ widget, pageBackground = '#ffffff' }) {
               key={m.label}
               className={`min-w-[72px] px-4 ${i > 0 ? 'border-l border-white/15' : ''}`}
             >
-              <div className="text-[11px] font-semibold uppercase tracking-wide text-white/50">{m.label}</div>
+              <div className="text-[11px] font-semibold uppercase tracking-wide text-white/50 break-words">{m.label}</div>
               <div className="mt-0.5 text-[22px] font-extrabold tabular-nums tracking-tight">{m.value}</div>
             </div>
           ))}
         </div>
-      </div>
+      </Contain>
     )
   }
 
@@ -289,11 +332,11 @@ export default function WidgetPreview({ widget, pageBackground = '#ffffff' }) {
     const bold = props.bold !== false
     const align = props.align === 'center' || props.align === 'right' ? props.align : 'left'
     return (
-      <div className={`h-full w-full overflow-hidden p-1 ${clearShell}`} style={{ textAlign: align }}>
+      <Contain innerClassName={`p-1 ${clearShell}`} innerStyle={{ textAlign: align }}>
         <div
           className={`leading-[1.15] tracking-tight ${pageLight ? 'text-gray-900' : 'text-white'}`}
           style={{
-            fontSize,
+            fontSize: Math.min(32, Math.max(8, fontSize)),
             fontWeight: bold ? 800 : 500,
             whiteSpace: 'pre-wrap',
             wordBreak: 'break-word',
@@ -301,7 +344,7 @@ export default function WidgetPreview({ widget, pageBackground = '#ffffff' }) {
         >
           {label}
         </div>
-      </div>
+      </Contain>
     )
   }
 
@@ -310,11 +353,11 @@ export default function WidgetPreview({ widget, pageBackground = '#ffffff' }) {
     const bold = Boolean(props.bold)
     const align = props.align === 'center' || props.align === 'right' ? props.align : 'left'
     return (
-      <div className={`h-full w-full overflow-hidden p-1 ${clearShell}`} style={{ textAlign: align }}>
+      <Contain innerClassName={`p-1 ${clearShell}`} innerStyle={{ textAlign: align }}>
         <p
           className={`m-0 leading-[1.2] ${pageLight ? 'text-gray-700' : 'text-white/80'}`}
           style={{
-            fontSize,
+            fontSize: Math.min(32, Math.max(8, fontSize)),
             fontWeight: bold ? 700 : 400,
             whiteSpace: 'pre-wrap',
             wordBreak: 'break-word',
@@ -322,7 +365,7 @@ export default function WidgetPreview({ widget, pageBackground = '#ffffff' }) {
         >
           {props.body || props.text || 'Add your message here'}
         </p>
-      </div>
+      </Contain>
     )
   }
 
@@ -331,8 +374,8 @@ export default function WidgetPreview({ widget, pageBackground = '#ffffff' }) {
       ? props.items
       : [{ text: props.body || 'Add a note' }]
     return (
-      <div
-        className={`${shellBase} flex flex-col overflow-auto border-amber-300/60 bg-[#fff8e7] p-3 text-gray-900 shadow-[0_6px_22px_rgba(180,120,20,0.18)]`}
+      <Contain
+        innerClassName={`${shellBase} flex flex-col border-amber-300/60 bg-[#fff8e7] p-3 text-gray-900 shadow-[0_6px_22px_rgba(180,120,20,0.18)]`}
       >
         <div className="mb-2 flex items-center gap-2 border-b border-amber-200/80 pb-2 text-sm font-bold text-amber-900">
           <span className="grid h-5 w-5 place-items-center rounded bg-amber-400/40 text-[10px]">✓</span>
@@ -342,11 +385,11 @@ export default function WidgetPreview({ widget, pageBackground = '#ffffff' }) {
           {items.map((item, i) => (
             <li key={i} className="flex gap-2">
               <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-amber-500" />
-              <span>{typeof item === 'string' ? item : item.text || item.label}</span>
+              <span className="min-w-0 break-words">{typeof item === 'string' ? item : item.text || item.label}</span>
             </li>
           ))}
         </ul>
-      </div>
+      </Contain>
     )
   }
 
@@ -355,7 +398,7 @@ export default function WidgetPreview({ widget, pageBackground = '#ffffff' }) {
       ? props.items
       : [{ headline: props.body || 'Latest update', source: 'Internal' }]
     return (
-      <div className={`overflow-auto p-4 pl-5 ${accentShell}`}>
+      <Contain innerClassName={`p-4 pl-5 ${accentShell}`}>
         <div className="mb-3 flex items-center justify-between gap-2">
           <div className="text-[11px] font-bold uppercase tracking-[0.14em] text-brand">
             {props.title || 'Headlines'}
@@ -367,7 +410,7 @@ export default function WidgetPreview({ widget, pageBackground = '#ffffff' }) {
         <ul className="space-y-3">
           {items.map((item, i) => (
             <li key={i} className="border-l-2 border-brand/90 pl-3">
-              <div className="text-[15px] font-semibold leading-snug tracking-tight text-white">
+              <div className="break-words text-[15px] font-semibold leading-snug tracking-tight text-white">
                 {item.headline || item.label || item.text}
               </div>
               {item.source ? (
@@ -376,7 +419,7 @@ export default function WidgetPreview({ widget, pageBackground = '#ffffff' }) {
             </li>
           ))}
         </ul>
-      </div>
+      </Contain>
     )
   }
 
