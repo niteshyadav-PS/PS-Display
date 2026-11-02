@@ -2712,9 +2712,9 @@ export default function DisplayEditor() {
                     />
                   </label>
                   <p className="text-[11px] leading-snug text-gray-500">
-                    Most sites load through a secure proxy. Power BI / Fabric links load directly in
-                    the iframe (proxy would break them). Use a Power BI &quot;Publish to web&quot; or
-                    shareable embed URL if the report still shows unavailable.
+                    Most sites load through a secure proxy. Power BI, Fabric, and public
+                    <code className="mx-0.5">/embed/…</code> boards (e.g. Live Stock) load directly
+                    so their data can appear. Use a public embed URL with no login.
                   </p>
                   {selected.props?.url ? (
                     <a

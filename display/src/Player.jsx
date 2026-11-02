@@ -76,7 +76,11 @@ function resolveVideoUrl(url) {
 
 function shouldEmbedDirect(url) {
   try {
-    const host = new URL(url).hostname.toLowerCase()
+    const parsed = new URL(url)
+    const host = parsed.hostname.toLowerCase()
+    const path = parsed.pathname.toLowerCase()
+    // Public embed boards (stock, etc.) need the real path + JS modules.
+    if (path.startsWith('/embed/') || path === '/embed') return true
     return (
       host.includes('powerbi.com') ||
       host.includes('fabric.microsoft.com') ||

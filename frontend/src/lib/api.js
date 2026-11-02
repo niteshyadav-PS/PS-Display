@@ -25,10 +25,15 @@ export function apiOrigin() {
   return API_URL.replace(/\/api\/?$/, '')
 }
 
-/** Sites that must load directly (proxy breaks auth / SPAs like Power BI) */
+/** Sites that must load directly (proxy breaks auth / SPAs like Power BI / stock boards) */
 function shouldEmbedDirect(url) {
   try {
-    const host = new URL(url).hostname.toLowerCase()
+    const parsed = new URL(url)
+    const host = parsed.hostname.toLowerCase()
+    const path = parsed.pathname.toLowerCase()
+    // Public embed dashboards (e.g. Stock /embed/stock) need their real URL path
+    // and module scripts — the HTML proxy would leave a blank page.
+    if (path.startsWith('/embed/') || path === '/embed') return true
     return (
       host.includes('powerbi.com') ||
       host.includes('fabric.microsoft.com') ||
